@@ -1,0 +1,40 @@
+services:
+  dev:
+    build: .
+    image: opencode-dev
+    container_name: opencode-dev
+    hostname: opencode-dev
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    environment:
+      - GH_HOST=github.com
+      - OPENCODE_ENV=container
+    volumes:
+      - .:/workspace
+      - ~/.ssh:/root/.ssh:ro
+      - ~/.gitconfig:/root/.gitconfig:ro
+      - ~/.config/gh:/root/.config/gh:ro
+      - ~/.config/opencode:/root/.config/opencode:ro
+      - ~/.opencode:/root/.opencode:ro
+      - ./wg0.conf:/etc/wireguard/wg0.conf:ro
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.src_valid_mark=1
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - |
+        if command -v wg-quick >/dev/null 2>&1 && [ -f /etc/wireguard/wg0.conf ] && [ -e /dev/net/tun ]; then
+          wg-quick up wg0
+          trap 'wg-quick down wg0' EXIT
+        fi
+        exec /bin/bash
